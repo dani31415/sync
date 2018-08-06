@@ -49,18 +49,18 @@ public class SyncFolders {
     }
     
     private SyncFile merge(SyncFile sf1,SyncFile sf2) {
-        SyncFile sf = new SyncFile();
-        sf.name="<merge>";
-        sf.isFolder = true;
-        sf.exists = true;
-        add(sf1,sf,1);
-        add(sf2,sf,2);
-        return sf;
+        SyncFile dest = new SyncFile();
+        dest.meta.name="<merge>";
+        dest.meta.isFolder = true;
+        dest.meta.exists = true;
+        addChildren(sf1,dest,1);
+        addChildren(sf2,dest,2);
+        return dest;
     }
     
-    private void add(SyncFile src, SyncFile dest, int listId) {
+    private void addChildren(SyncFile src, SyncFile dest, int listId) {
         for (SyncFile sf : src.children) {
-            if (!sf.isFolder) {
+            if (!sf.meta.isFolder) {
                 addFile(sf,dest,listId);
             } else {
                 addFolder(sf,dest,listId);
@@ -77,70 +77,71 @@ public class SyncFolders {
     private void addFolder(SyncFile sf, SyncFile dest, int listId) {
         SyncFile e = sf.cloneMe();
         e.listId = listId;
-        e=dest.setBest(e);
-        add(sf,e,listId);
+        SyncFile f=dest.setBest(e); // f is the SyncFile inside dest
+        addChildren(sf,f,listId); // add children of "sf" into "f"
     }
     
     private void execute(SyncFile src, SyncFolder fold, SyncFile destParent, int listId, boolean copy) {
-        if (src.name.equals("ARCHIVE")) {
+        if (src.meta.name.equals("ARCHIVE")) {
             if (!fold.hasArchive) {
                 return;
             }
         }
         // if result is archive but dest has no archive return
         //System.out.println("Process "+result.name);
-        SyncFile dest=src.name.equals("<merge>")?destParent:destParent.findChildByName(src.name);
+        SyncFile dest=src.meta.name.equals("<merge>")?destParent:destParent.findChildByName(src.meta.name);
         try {
             if (src.listId!=0 && src.listId!=listId) {
                 if (copy) {
-                    if (src.isFolder && src.exists) {
-                        if (dest==null || !dest.exists) {
+                    if (src.meta.isFolder && src.meta.exists) {
+                        if (dest==null || !dest.meta.exists) {
                             if (dest==null) {
                                 dest = new SyncFile();
                                 destParent.addSyncFile(dest);
                             }
                             dest.fillFrom(src);
-                            dest.fullName = new File(destParent.fullName,dest.name).getAbsolutePath();
+                            dest.fullName = new File(destParent.fullName,dest.meta.name).getAbsolutePath();
                             log("mkdir "+dest.fullName);
                             if (!DEBUG) new File(dest.fullName).mkdir();
                             dest.updateInvalidate();
                         }
                     }
-                    if (!src.isFolder && src.exists) {
-                        if (dest==null || !dest.exists || !src.sha1.equals(dest.sha1)) { // skip existing equal file
+                    if (!src.meta.isFolder && src.meta.exists) {
+                        if (dest==null || !dest.meta.exists || !src.meta.sha1.equals(dest.meta.sha1)) { // skip existing equal file
                             if (dest==null) {
                                 dest = new SyncFile();
                                 destParent.addSyncFile(dest);
                             }
                             dest.fillFrom(src); // recover sha1, ...
-                            dest.fullName = new File(destParent.fullName,dest.name).getAbsolutePath();
+                            dest.fullName = new File(destParent.fullName,dest.meta.name).getAbsolutePath();
                             log("copy "+src.fullName+" to "+dest.fullName);
                             if (!DEBUG) FileTools.copy(new File(src.fullName),new File(dest.fullName));
                             dest.updateInvalidate();
                         }
                     }
-                    if (src.isFolder && !src.exists) {
+                    if (src.meta.isFolder && !src.meta.exists) {
                         return;
                     }
-                    if (!src.isFolder && !src.exists) {
+                    if (!src.meta.isFolder && !src.meta.exists) {
                         return;
                     }
                 } else {
-                    if (src.isFolder && !src.exists) {
-                        if (dest!=null && dest.exists) {
-                            dest.exists = false;
+                    if (src.meta.isFolder && !src.meta.exists) {
+                        if (dest!=null && dest.meta.exists) {
+                            dest.meta.exists = false;
                             log("rmdir "+dest.fullName);
-                            if (fold.hasArchive)
+                            if (fold.hasArchive) {
                                 if (!DEBUG) moveToArchive(dest,"ARCHIVE");
-                            else
+                            } else {
                                 if (!DEBUG) moveToArchive(dest,".deleted");
+                            }
                             dest.updateInvalidate();
                             return;
                         }
                     }
-                    if (!src.isFolder && !src.exists) {
-                        if (dest!=null && dest.exists && dest.fullName!=null) {
-                            dest.exists = false;
+                    if (!src.meta.isFolder && !src.meta.exists) {
+                        if (dest!=null && dest.meta.exists && dest.fullName!=null) {
+                            dest.meta.exists = false;
                             log("rm "+dest.fullName);
                             if (!DEBUG) moveToArchive(dest,".deleted");
                             dest.updateInvalidate();
@@ -149,7 +150,7 @@ public class SyncFolders {
                     }
                 }
             }
-            if (!src.exists) {
+            if (!src.meta.exists) {
                 return;
             }
             for (SyncFile c : src.children) {
@@ -170,7 +171,7 @@ public class SyncFolders {
         while (parent!=null) {
             parentPath = parent.fullName;
             if (parent.parent!=null)
-                path += "/"+parent.name;
+                path += "/"+parent.meta.name;
             parent = parent.parent;
         };
         File from = new File(folder.fullName);

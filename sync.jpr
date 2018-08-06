@@ -54,8 +54,6 @@
    <hash n="oracle.jdeveloper.model.PathsConfiguration">
       <hash n="javaContentSet">
          <list n="pattern-filters">
-            <string v="-dma/.backup"/>
-            <string v="-.backup"/>
             <string v="+**"/>
          </list>
          <list n="url-path">
@@ -82,6 +80,7 @@
             <hash n="oracle.jdevimpl.runner.debug.DebugConfiguration">
                <value n="remoteParameter:jpdaListen:localAddress" v=""/>
             </hash>
+            <value n="programArguments" v="test.in test.out"/>
             <url n="targetURL" path="src/dma/cat/sync/MainSync.java"/>
             <value n="VMName" v="client"/>
          </hash>

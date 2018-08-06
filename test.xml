@@ -1,0 +1,102 @@
+<project name="dma.cat.sync.test">
+    <target name="test" depends="build">
+        <delete dir="test.out" />
+        <delete dir="test.in" />
+        <copy todir="test.in">
+            <fileset dir="test" excludes="**/.backup"/>
+        </copy>
+
+        <mkdir dir="test.out"/>
+        <antcall target="test.run"/>
+        <assertFileExists file="test.out/a.txt"/>
+        <assertFileExists file="test.out/c.txt"/>
+        <assertFileExists file="test.out/b"/>
+        <assertFileExists file="test.out/b/b.txt"/>
+        
+        <delete file="test.in/a.txt"/>
+        <antcall target="test.run"/>
+        <assertFileExists file="test.out/.deleted/a.txt"/>
+        <assertFileNotExists file="test.out/a.txt"/>
+        
+        <delete dir="test.in/b"/>
+        <antcall target="test.run"/>
+        <assertFileNotExists file="test.out/b"/>
+        
+        <echo message="d" file="test.in/d.txt"/>
+        <antcall target="test.run"/>
+        <assertFileExists file="test.out/d.txt"/>
+        
+        <echo message="d0" file="test.out/d.txt"/>
+        <antcall target="test.run"/>
+        <assertFileContains file="test.in/d.txt" content="d0"/>
+        
+        <mkdir dir="test.in/e"/>
+        <mkdir dir="test.out/e"/>
+        <echo message="e1" file="test.in/e/e1.txt"/>
+        <echo message="e2" file="test.out/e/e2.txt"/>
+        <antcall target="test.run"/>
+        <assertFileExists file="test.out/e/e1.txt"/>
+        <assertFileExists file="test.in/e/e2.txt"/>
+        
+        <echo message="f1" file="test.in/e/f1.txt"/>
+        <antcall target="test.run"/>
+        <assertFileExists file="test.out/e/f1.txt"/>
+
+        <echo message="f2" file="test.out/e/f2.txt"/>
+        <antcall target="test.run"/>
+        <assertFileExists file="test.in/e/f2.txt"/>
+
+        <echo message="d1" file="test.in/d.txt"/>
+        <sleep milliseconds="10"/>
+        <echo message="d2" file="test.out/d.txt"/>
+        <antcall target="test.run"/>
+        <assertFileContains file="test.in/d.txt" content="d2"/>
+    </target>
+    
+    <target name="test.run">
+        <java classpath="classes" classname="dma.cat.sync.MainSync">
+            <arg value="test.in"/>
+            <arg value="test.out"/>
+        </java>
+    </target>
+
+    <macrodef name="assertFileExists">
+        <attribute name="file"/>
+        <sequential>
+            <fail message="Missing file '@{file}'">
+                <condition>
+                    <not>
+                        <available file="@{file}"/>
+                    </not>
+                </condition>
+            </fail>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="assertFileNotExists">
+        <attribute name="file"/>
+        <sequential>
+            <fail message="Existing file '@{file}'">
+                <condition>
+                    <available file="@{file}"/>
+                </condition>
+            </fail>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="assertFileContains">
+        <attribute name="file"/>
+        <attribute name="content"/>
+        <sequential>
+            <local name="contents"/>
+            <loadfile property="contents" srcFile="@{file}"/>
+            <fail message="Missing content '@{content}' in '@{file}'. Found '${contents}'">
+                <condition>
+                    <not>
+                        <contains string="${contents}" substring="@{content}"/>
+                    </not>
+                </condition>
+            </fail>
+        </sequential>
+    </macrodef>
+</project>

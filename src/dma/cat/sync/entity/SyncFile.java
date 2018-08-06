@@ -9,39 +9,40 @@ import java.util.Date;
 import java.util.Vector;
 
 public class SyncFile implements Comparable {
-    public String name;
+    
     public String fullName;
-    public long size;
-    public long trackDate;
-    public long modificationDate;
-    public String sha1;
-    public boolean exists;
-    public boolean isFolder;
+    
+    public MetaFile meta;
 
     public Vector<SyncFile> children;
     public boolean updateInvalid;
-    public SyncFile meta;
+    
     public SyncFile parent;
     public int listId;
     public int descendants;
 
     public SyncFile() {
         children = new Vector<SyncFile>();
-        sha1 = "";
+        meta = new MetaFile();
+        meta.sha1 = "";
     }
 
     public void fillFrom(SyncFile sf) {    
-        name = sf.name;
         fullName = sf.fullName;
-        size = sf.size;
-        trackDate = sf.trackDate;
-        modificationDate = sf.modificationDate;
-        sha1 = sf.sha1;
-        exists = sf.exists;
-        isFolder = sf.isFolder;
+        fillFrom(sf.meta);
         listId = sf.listId;
     }
     
+    public void fillFrom(MetaFile c) {    
+        meta.name = c.name;
+        meta.size = c.size;
+        meta.trackDate = c.trackDate;
+        meta.modificationDate = c.modificationDate;
+        meta.sha1 = c.sha1;
+        meta.exists = c.exists;
+        meta.isFolder = c.isFolder;
+    }
+
     public SyncFile cloneMe() {
         SyncFile output= new SyncFile();
         output.fillFrom(this);
@@ -50,7 +51,7 @@ public class SyncFile implements Comparable {
 
     public SyncFile findChildByName(String name) {
         for (SyncFile c : children) {
-            if (c.name.equals(name)) {
+            if (c.meta.name.equals(name)) {
                 return c;
             }
         }
@@ -58,25 +59,18 @@ public class SyncFile implements Comparable {
     }
 
     public void addSyncFile(SyncFile f) {
-        for (SyncFile c : children) {
-            if (c.name.equals(f.name)) { // file exists?
-                // Replace, but keep meta
-                f.meta = c.meta;
-                c.parent = null;
-                children.remove(c);
-                f.parent = this;
-                children.add(f);
-                return;
-            }
+        if (f.parent!=null) {
+            throw new Error("Remove first from the previous parent.");
         }
         f.parent = this;
         children.add(f);
     }
     
     public SyncFile setBest(SyncFile f) {
-        SyncFile e = f!=null?this.findChildByName(f.name):null;
+        SyncFile e = findChildByName(f.meta.name);
         if (e!=null) {
-            if (e.trackDate<f.trackDate) {
+            // Choose the best according to date
+            if (e.meta.modificationDate<f.meta.modificationDate) {
                 e.fillFrom(f);
             }
             return e;
@@ -85,39 +79,28 @@ public class SyncFile implements Comparable {
             return f;
         }
     }
-
-    public void addMeta(SyncFile f) {
-        for (SyncFile c : children) {
-            if (c.name.equalsIgnoreCase(f.name)) { // file exists?
-                c.meta = f;
-                return;
-            }
-        }
-        SyncFile n = new SyncFile();
-        n.exists = false;
-        n.name = f.name;
-        n.meta = f;
-        n.parent = this;
-        children.add(n);
-    }
     
     public void sortChildren() {
         Collections.sort(children);
     }
     
     static public boolean ignoreName(String name) {
-        return name.equals(".backup") || name.equals(".deleted") || name.endsWith(".lrdata");
+        return name.equals(".backup") || name.equals(".deleted") || name.endsWith(".lrdata") || name.equals(".DS_Store") || name.equals(".git") || name.equals(".gitignore");
     }
     
-    public boolean needsMetaUpdate() {
-        if (meta==null) {
-            meta = new SyncFile();
+    /**
+     * Detects whether the file needs the metadata to be updated
+     * @param c
+     * @return
+     */
+    public boolean needsMetaUpdate(MetaFile c) {
+        if (c==null) {
             return true;
         }
-        if (exists!=meta.exists) return true; // file removed
-        if (exists && isFolder!=meta.isFolder) return true; // changed folder status
-        if (exists && size!=meta.size) return true; // file changed
-        if (exists && modificationDate!=meta.modificationDate) return true; // file changed
+        if (meta.exists!=c.exists) return true; // file removed
+        if (meta.exists && meta.isFolder!=c.isFolder) return true; // changed folder status
+        if (meta.exists && meta.size!=c.size) return true; // file changed
+        if (meta.exists && meta.modificationDate!=c.modificationDate) return true; // file changed
         return false;
     }
     
@@ -125,27 +108,27 @@ public class SyncFile implements Comparable {
         StringBuffer sb = new StringBuffer();
         for (int i=0;i<ident;i++) sb.append("\t");
         sb.append("<");
-        if (isFolder) sb.append("folder");
+        if (meta.isFolder) sb.append("folder");
         else sb.append("file");
         sb.append(" name=\"");
-        String s=name.replaceAll("&","&amp;");
+        String s=meta.name.replaceAll("&","&amp;");
         sb.append(s);
         sb.append("\" track=\"");
-        sb.append(trackDate);
+        sb.append(meta.trackDate);
         sb.append("\" descendants=\"");
         sb.append(descendants);
         sb.append("\"");
-        if (!isFolder) {
+        if (!meta.isFolder) {
             sb.append(" modified=\"");
-            sb.append(modificationDate);
+            sb.append(meta.modificationDate);
             sb.append("\" size=\"");
-            sb.append(size);
+            sb.append(meta.size);
             sb.append("\"");
             sb.append(" sha1=\"");
-            sb.append(sha1);
+            sb.append(meta.sha1);
             sb.append("\"");
         }
-        if (!exists) {
+        if (!meta.exists) {
             sb.append(" removed=\"true\"");
         }
         sb.append(" />");
@@ -153,20 +136,20 @@ public class SyncFile implements Comparable {
     }
     
     public int compareTo(SyncFile sf1, SyncFile sf2) {
-        return sf1.name.compareTo(sf2.name);
+        return sf1.meta.name.compareTo(sf2.meta.name);
     }
 
     public int compareTo(Object o) {
         SyncFile sf = (SyncFile)o;
-        if (exists!=sf.exists) {
-            if (exists) return -1;
+        if (meta.exists!=sf.meta.exists) {
+            if (meta.exists) return -1;
             return 1;
         }
-        if (isFolder!=sf.isFolder) {
-            if (!isFolder) return -1;
+        if (meta.isFolder!=sf.meta.isFolder) {
+            if (!meta.isFolder) return -1;
             return 1;
         }
-        return name.compareTo(sf.name);
+        return meta.name.compareTo(sf.meta.name);
     }
     
     public void updateInvalidate() {
@@ -183,12 +166,13 @@ public class SyncFile implements Comparable {
     public void showTree(int depth) {
         System.out.print(listId+" ");
         for (int i=0;i<depth;i++) System.out.print(".");
-        System.out.print(name);
-        if (isFolder) System.out.print(" (dir)");
-        if (!exists) System.out.print(" (removed)");
+        System.out.print(meta.name);
+        if (meta.isFolder) System.out.print(" (dir)");
+        if (!meta.exists) System.out.print(" (removed)");
         System.out.println();
         for (SyncFile c : children) {
             c.showTree(depth+1);
         }
     }
+    
 }

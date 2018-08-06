@@ -1,5 +1,7 @@
 package dma.cat.sync.tools;
 
+import dma.cat.sync.entity.MetaFileList;
+import dma.cat.sync.entity.MetaFile;
 import dma.cat.sync.entity.SyncFile;
 
 import dma.cat.sync.entity.SyncFolder;
@@ -49,19 +51,23 @@ public class LoadFolder {
         existsAsFolder(file);
         SyncFile sf = new SyncFile();
         sf.fullName = file.getAbsolutePath();
-        sf.name = file.getName();
-        sf.isFolder = true;
-        sf.exists = true;
+        sf.meta.name = file.getName();
+        sf.meta.isFolder = true;
+        sf.meta.exists = true;
         
-        if (!loadBackupMeta(sf)) {
+        MetaFileList mf = loadBackupMeta(sf.fullName);
+        if (mf==null) {
             // If not able to load metafile, create it
             sf.updateInvalid=true;
+        } else {
+            sf.descendants = mf.descendants;
         }
         
         if (currentLoad.previousFound==0) {
             currentLoad.previousFound=sf.descendants;
         }
         
+        // Recursively load files
         File [] fs = file.listFiles();
         if (fs!=null) {
             for (File c : fs) {
@@ -76,16 +82,34 @@ public class LoadFolder {
                 }
             }
         }
-        int n = sf.children.size();
+        
+        // Update metadata information
+        int n = 0;
         for (SyncFile c : sf.children) {
             n += c.descendants;
-            computeBackupMeta(c);
+            // computeBackupMeta(c);
+            computeBackupMeta(mf,c);
         }
+
+        if (mf!=null) {
+            // Add files from metadata that where removed since last time
+            for (MetaFile c : mf.children) {
+                SyncFile sf0 = new SyncFile();
+                sf0.fillFrom(c);
+                sf0.meta.exists = false;
+                sf0.parent = sf;
+                sf.children.add(sf0);
+            }
+        }
+        n += sf.children.size(); // Including removed files
+        
         if (n!=sf.descendants) {
             // Changed the number of descendants
             sf.descendants = n;
             sf.updateInvalid = true;
         }
+        
+        // Save metadata file only if changed
         saveBackupMeta(sf);
         return sf;
     }
@@ -94,15 +118,15 @@ public class LoadFolder {
         existsAsFile(file);
         SyncFile sf = new SyncFile();
         sf.fullName = file.getAbsolutePath();
-        sf.name = file.getName();
-        sf.isFolder = false;
-        sf.exists = true;
-        sf.modificationDate = file.lastModified();
-        sf.size = file.length();
+        sf.meta.name = file.getName();
+        sf.meta.isFolder = false;
+        sf.meta.exists = true;
+        sf.meta.modificationDate = file.lastModified();
+        sf.meta.size = file.length();
         return sf;
     }
 
-    public void existsAsFile(File file) {
+    public static void existsAsFile(File file) {
         if (!file.exists() || file.isDirectory()) {
             throw new Error("File "+file.getAbsolutePath()+" does not exist ot it is a folder.");
         }
@@ -114,12 +138,13 @@ public class LoadFolder {
         }
     }
 
-    private boolean loadBackupMeta(SyncFile sf) {
-        File f = new File(sf.fullName, ".backup");
+    private static MetaFileList loadBackupMeta(String fullName) {
+        File f = new File(fullName, ".backup");
         if (!f.exists()) {
-            System.out.println("New folder: "+sf.fullName);           
-            return false;
+            System.out.println("New folder: "+fullName);           
+            return null;
         }
+        MetaFileList mf = new MetaFileList();
         existsAsFile(f);
         DocumentBuilder db;
         try {
@@ -128,7 +153,7 @@ public class LoadFolder {
             NodeList nl = doc.getElementsByTagName("file");
             for (int i=0;i<nl.getLength();i++) {
                 Element elem = (Element)nl.item(i);
-                SyncFile c = new SyncFile();
+                MetaFile c = new MetaFile();
                 c.name = elem.getAttribute("name");
                 c.trackDate = Long.parseLong(elem.getAttribute("track"));
                 c.modificationDate = Long.parseLong(elem.getAttribute("modified"));
@@ -141,19 +166,20 @@ public class LoadFolder {
                 }
                 c.sha1 = elem.getAttribute("sha1").trim();
                 c.isFolder = false;
-                sf.addMeta(c);
+                mf.addChild(c);
+                //sf.addMeta(c);
             }
             nl = doc.getElementsByTagName("folder");
             Element current = (Element)nl.item(0); // Own folder
             String r0 = current.getAttribute("descendants");
             if (r0==null || r0.length()==0) {
-                sf.descendants = 0;
+                mf.descendants = 0;
             } else {
-                sf.descendants = Integer.parseInt(r0);
+                mf.descendants = Integer.parseInt(r0);
             }
             for (int i=1;i<nl.getLength();i++) { // ignore first because it is the top one!
                 Element elem = (Element)nl.item(i);
-                SyncFile c = new SyncFile();
+                MetaFile c = new MetaFile();
                 c.name = elem.getAttribute("name");
                 String r = elem.getAttribute("removed");
                 c.trackDate = Long.parseLong(elem.getAttribute("track"));
@@ -163,51 +189,40 @@ public class LoadFolder {
                     c.exists = true;
                 }
                 c.isFolder = true;
-                sf.addMeta(c);
+                mf.addChild(c);
             }
-            return true;
+            return mf;
         } catch (Exception ex) {
             // Dot not launch exception
             System.err.println("Error when reading: "+f);
             ex.printStackTrace();
         }
-        return false;
+        return null;
     }
 
-    public void computeBackupMeta(SyncFile sf) {
-        // Compute sha1
-        if (sf.needsMetaUpdate()) {
-            sf.needsMetaUpdate();
-            if (sf.exists) {
-                if (!sf.isFolder) {
-                    FileTools ft = new FileTools();
-                    sf.sha1 = ft.sha1(new File(sf.fullName));
-                }
-                sf.trackDate = new Date().getTime();
-            } else {
-                sf.meta.trackDate = new Date().getTime();
+    public void computeBackupMeta(MetaFileList mf, SyncFile sf) {
+        MetaFile c = mf!=null ? mf.find(sf.meta.name):null;
+        if (sf.needsMetaUpdate(c)) {
+            // Compute metadata
+            if (!sf.meta.isFolder) {
+                FileTools ft = new FileTools();
+                sf.meta.sha1 = ft.sha1(new File(sf.fullName));
             }
+            sf.meta.trackDate = new Date().getTime();
             sf.updateInvalidate();
         } else {
-            if (sf.exists) {
-                if (!sf.isFolder) {
-                    sf.sha1 = sf.meta.sha1;
-                }
-                sf.trackDate = sf.meta.trackDate;
+            // Copy metadata
+            if (!sf.meta.isFolder) {
+                sf.meta.sha1 = c.sha1;
             }
+            sf.meta.trackDate = c.trackDate;
         }
 
-        if (sf.exists) {
-            // Copy actual file to meta
-            sf.meta.fillFrom(sf);
-        } else {
-            sf.meta.exists = false;
-            // Copy meta to actual file
-            sf.fillFrom(sf.meta);
+        if (c!=null) {
+            mf.children.remove(c);
         }
-        sf.meta = null; /// not needed anymore
     }
-    
+
     public void saveBackupMeta(SyncFile sf) {
         if (sf.updateInvalid) { // save only if modified
             try {

@@ -1,0 +1,15 @@
+<project name="dma.cat.sync">
+    <property name="classes.dir" location="classes"/>
+    
+    <import file="test.xml"/>
+    
+    <target name="build">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="src" destdir="${classes.dir}" debug="on"/>
+    </target>
+    
+    <target name="clean">
+        <delete dir="${classes.dir}"/>
+    </target>
+    
+</project>
