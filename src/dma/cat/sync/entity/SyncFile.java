@@ -70,6 +70,7 @@ public class SyncFile implements Comparable {
         SyncFile e = findChildByName(f.meta.name);
         if (e!=null) {
             // Choose the best according to date
+            System.out.println(e.fullName+" ("+e.meta.modificationDate+") vs "+f.fullName+" ("+e.meta.modificationDate+")");
             if (e.meta.modificationDate<f.meta.modificationDate) {
                 e.fillFrom(f);
             }
