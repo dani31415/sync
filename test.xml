@@ -26,6 +26,7 @@
         <antcall target="test.run"/>
         <assertFileExists file="test.out/d.txt"/>
         
+        <sleep milliseconds="10"/>
         <echo message="d0" file="test.out/d.txt"/>
         <antcall target="test.run"/>
         <assertFileContains file="test.in/d.txt" content="d0"/>
