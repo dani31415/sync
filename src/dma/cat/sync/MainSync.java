@@ -36,7 +36,7 @@ public class MainSync {
             //File f2 = new File("h:\\personal\\fotos");
             f2 = new File("E:\\personal");
         }
-        System.out.println("Sinchronization folders:");
+        System.out.println("Synchronization folders:");
         System.out.println(f1.getAbsolutePath());
         System.out.println(f2.getAbsolutePath());
         SyncFolder sf1 = lf.load(f1);

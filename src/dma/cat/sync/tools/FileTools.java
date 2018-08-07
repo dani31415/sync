@@ -67,10 +67,26 @@ public class FileTools {
     }
     
     static public void moveFolder(File from, File to) {
-        to.mkdirs();
+        if (!to.exists()) {
+            if (!to.mkdirs()) {
+                throw new Error("Impossible to create folder "+to.getAbsolutePath());
+            }
+        }
         File toName = new File(to,from.getName());
+        int counter=1;
+        while (toName.exists()) {
+            // Find a different name
+            toName = new File(to,from.getName()+"."+counter);
+            counter++;
+        }
         if (!from.renameTo(toName)) {
             throw new Error("Failed renaming from "+from.getAbsolutePath()+" to "+toName.getAbsolutePath());
+        }
+    }
+    
+    static public void rename(File from, File to) {
+        if (!from.renameTo(to)) {
+            throw new Error("Failed renaming from "+from.getAbsolutePath()+" to "+to.getAbsolutePath());
         }
     }
 }

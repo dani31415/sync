@@ -6,4 +6,4 @@ Rules
 
 * If a file/folder is removed from one target folder, it is moved to ".deleted" in the other target folder
 * If a file/folder is created in one target folder, it is copied to the other target folder
-*
+* Renaming files and folders are obtimized

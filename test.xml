@@ -4,23 +4,24 @@
     </condition>
  
     <target name="test" depends="build">
-        <delete dir="test.out" />
-        <delete dir="test.in" />
-        <copy todir="test.in">
-            <fileset dir="test" excludes="**/.backup"/>
-        </copy>
+        <antcall target="test.init"/>
 
-        <mkdir dir="test.out"/>
         <antcall target="test.run"/>
-        <assertFileExists file="test.out/a.txt"/>
+        <assertFileExists file="test.out/a1.txt"/>
+        <assertFileExists file="test.out/a2.txt"/>
         <assertFileExists file="test.out/c.txt"/>
         <assertFileExists file="test.out/b"/>
         <assertFileExists file="test.out/b/b.txt"/>
         
-        <delete file="test.in/a.txt"/>
+        <delete file="test.in/a1.txt"/>
         <antcall target="test.run"/>
-        <assertFileExists file="test.out/.deleted/a.txt"/>
-        <assertFileNotExists file="test.out/a.txt"/>
+        <assertFileExists file="test.out/.deleted/a1.txt"/>
+        <assertFileNotExists file="test.out/a1.txt"/>
+
+        <delete file="test.out/a2.txt"/>
+        <antcall target="test.run"/>
+        <assertFileExists file="test.in/.deleted/a2.txt"/>
+        <assertFileNotExists file="test.in/a2.txt"/>
         
         <delete dir="test.in/b"/>
         <antcall target="test.run"/>
@@ -56,10 +57,41 @@
         <echo message="d2" file="test.out/d.txt"/>
         <antcall target="test.run"/>
         <assertFileContains file="test.in/d.txt" content="d2"/>
+        
+        <sleep milliseconds="${waitMilliseconds}"/>
+        <move file="test.in/d.txt" tofile="test.in/d2.txt"/>
+        <antcall target="test.run"/>
+        <assertFileExists file="test.in/d2.txt"/>
+        <assertFileNotExists file="test.in/d.txt"/>
+        
+        <sleep milliseconds="${waitMilliseconds}"/>
+        <move file="test.in/e" tofile="test.in/e2"/>
+        <antcall target="test.run"/>
+        <assertFileExists file="test.out/e2"/>
+        <assertFileNotExists file="test.out/e"/>
+        
+        <sleep milliseconds="${waitMilliseconds}"/>
+        <mkdir dir="test.out/e"/>
+        <echo message="g" file="test.out/e/f"/>
+        <antcall target="test.run"/>
+        <assertFileExists file="test.in/e/f"/>
+
+        <echo message="a2" file="test.in/a2.txt"/>
+        <antcall target="test.run"/>
+        <assertFileExists file="test.out/a2.txt"/>
+    </target>
+    
+    <target name="test.init">
+        <delete dir="test.out" />
+        <delete dir="test.in" />
+        <copy todir="test.in" preservelastmodified="true">
+            <fileset dir="test" excludes="**/.backup"/>
+        </copy>
+        <mkdir dir="test.out"/>
     </target>
     
     <target name="test.run">
-        <java classpath="classes" classname="dma.cat.sync.MainSync">
+        <java classpath="classes" classname="dma.cat.sync.MainSync" failonerror="true">
             <arg value="test.in"/>
             <arg value="test.out"/>
         </java>

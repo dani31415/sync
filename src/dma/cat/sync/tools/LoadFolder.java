@@ -54,7 +54,8 @@ public class LoadFolder {
         sf.meta.name = file.getName();
         sf.meta.isFolder = true;
         sf.meta.exists = true;
-        
+        sf.meta.modificationDate = file.lastModified();
+
         MetaFileList mf = loadBackupMeta(sf.fullName);
         if (mf==null) {
             // If not able to load metafile, create it
@@ -92,13 +93,19 @@ public class LoadFolder {
         }
 
         if (mf!=null) {
-            // Add files from metadata that where removed since last time
+            // Add files from metadata that where removed 
             for (MetaFile c : mf.children) {
                 SyncFile sf0 = new SyncFile();
                 sf0.fillFrom(c);
+                if (c.exists) {
+                    // Removed since last datetime, so use now as changed datetime (otherwise the change datetime is the creation datetime)
+                    sf0.meta.modificationDate = new Date().getTime();
+                }
                 sf0.meta.exists = false;
                 sf0.parent = sf;
+                sf0.fullName = sf.fullName + File.separator + c.name;
                 sf.children.add(sf0);
+                sf.updateInvalid = true;
             }
         }
         n += sf.children.size(); // Including removed files
@@ -183,6 +190,9 @@ public class LoadFolder {
                 c.name = elem.getAttribute("name");
                 String r = elem.getAttribute("removed");
                 c.trackDate = Long.parseLong(elem.getAttribute("track"));
+                // Modified was optional
+                String smod = elem.getAttribute("modified");
+                if (smod!=null && smod.length()>0) c.modificationDate = Long.parseLong(smod);
                 if (r!=null && r.trim().equals("true")) {
                     c.exists = false;
                 } else {

@@ -20,6 +20,9 @@ public class SyncFile implements Comparable {
     public SyncFile parent;
     public int listId;
     public int descendants;
+    
+    // Used only at SyncFolders.otimize
+    public boolean markToMove;
 
     public SyncFile() {
         children = new Vector<SyncFile>();
@@ -30,6 +33,7 @@ public class SyncFile implements Comparable {
     public void fillFrom(SyncFile sf) {    
         fullName = sf.fullName;
         fillFrom(sf.meta);
+        children = new Vector<SyncFile>();
         listId = sf.listId;
     }
     
@@ -68,17 +72,30 @@ public class SyncFile implements Comparable {
     
     public SyncFile setBest(SyncFile f) {
         SyncFile e = findChildByName(f.meta.name);
+        
         if (e!=null) {
             // Choose the best according to date
-            // System.out.println(e.fullName+" ("+e.meta.modificationDate+") vs "+f.fullName+" ("+e.meta.modificationDate+")");
-            if (e.meta.modificationDate<f.meta.modificationDate) {
+            boolean show = false;
+            if (e.meta.modificationDate!=f.meta.modificationDate && e.meta.exists!=f.meta.exists) {
+                System.out.print(e.getSign()+e.fullName+" ("+e.meta.modificationDate+") vs "+f.getSign()+f.fullName+" ("+f.meta.modificationDate+")");
+                show = true;
+            }
+            if (f.isThisBest(e)) {
                 e.fillFrom(f);
             }
+            if (show)
+                System.out.println(" => "+e.getSign()+e.fullName+" ("+e.meta.modificationDate+")");
             return e;
         } else {
             addSyncFile(f);
             return f;
         }
+    }
+    
+    boolean isThisBest(SyncFile f) {
+        //if (!meta.exists) return true;
+        //if (!f.meta.exists) return false;
+        return meta.modificationDate>f.meta.modificationDate;
     }
     
     public void sortChildren() {
@@ -118,11 +135,13 @@ public class SyncFile implements Comparable {
         sb.append(meta.trackDate);
         sb.append("\" descendants=\"");
         sb.append(descendants);
+        sb.append("\" modified=\"");
+        sb.append(meta.modificationDate);
         sb.append("\"");
         if (!meta.isFolder) {
-            sb.append(" modified=\"");
-            sb.append(meta.modificationDate);
-            sb.append("\" size=\"");
+            //sb.append(" modified=\"");
+            //sb.append(meta.modificationDate);
+            sb.append(" size=\"");
             sb.append(meta.size);
             sb.append("\"");
             sb.append(" sha1=\"");
@@ -176,4 +195,21 @@ public class SyncFile implements Comparable {
         }
     }
     
+    public String [] splitInParentPath() {
+        SyncFile parent0 = parent;
+        String path = meta.name;
+        String parentPath = "";
+        while (parent0!=null) {
+            parentPath = parent0.fullName;
+            if (parent0.parent!=null)
+                path += "/"+parent0.meta.name;
+            parent0 = parent0.parent;
+        }
+        return new String[]{parentPath,path};
+    }
+
+    public String getSign() {
+        if (meta.exists) return "+";
+        else return "-";
+    }
 }
