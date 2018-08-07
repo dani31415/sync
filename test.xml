@@ -26,7 +26,7 @@
         <antcall target="test.run"/>
         <assertFileExists file="test.out/d.txt"/>
         
-        <sleep milliseconds="10"/>
+        <sleep seconds="2"/>
         <echo message="d0" file="test.out/d.txt"/>
         <antcall target="test.run"/>
         <assertFileContains file="test.in/d.txt" content="d0"/>
@@ -48,7 +48,7 @@
         <assertFileExists file="test.in/e/f2.txt"/>
 
         <echo message="d1" file="test.in/d.txt"/>
-        <sleep milliseconds="10"/>
+        <sleep seconds="2"/>
         <echo message="d2" file="test.out/d.txt"/>
         <antcall target="test.run"/>
         <assertFileContains file="test.in/d.txt" content="d2"/>
