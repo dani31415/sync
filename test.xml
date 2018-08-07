@@ -1,4 +1,8 @@
 <project name="dma.cat.sync.test">
+    <condition property="waitMilliseconds" value="2000" else="20">
+        <os family="unix" />
+    </condition>
+ 
     <target name="test" depends="build">
         <delete dir="test.out" />
         <delete dir="test.in" />
@@ -26,7 +30,7 @@
         <antcall target="test.run"/>
         <assertFileExists file="test.out/d.txt"/>
         
-        <sleep seconds="2"/>
+        <sleep milliseconds="${waitMilliseconds}"/>
         <echo message="d0" file="test.out/d.txt"/>
         <antcall target="test.run"/>
         <assertFileContains file="test.in/d.txt" content="d0"/>
@@ -48,7 +52,7 @@
         <assertFileExists file="test.in/e/f2.txt"/>
 
         <echo message="d1" file="test.in/d.txt"/>
-        <sleep seconds="2"/>
+        <sleep milliseconds="${waitMilliseconds}"/>
         <echo message="d2" file="test.out/d.txt"/>
         <antcall target="test.run"/>
         <assertFileContains file="test.in/d.txt" content="d2"/>
