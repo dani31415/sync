@@ -3,6 +3,8 @@
     
     <import file="test.xml"/>
     
+    <target name="all" depends="build"/>
+
     <target name="build">
         <mkdir dir="${classes.dir}"/>
         <javac srcdir="src" destdir="${classes.dir}" debug="on"/>
