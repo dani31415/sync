@@ -79,6 +79,12 @@
         <echo message="a2" file="test.in/a2.txt"/>
         <antcall target="test.run"/>
         <assertFileExists file="test.out/a2.txt"/>
+        
+        <move file="test.out/.deleted" tofile="test.out/ARCHIVE"/>
+        <delete dir="test.in/e2"/>
+        <antcall target="test.run"/>
+        <assertFileNotExists file="test.out/e2"/>
+        <assertFileExists file="test.out/ARCHIVE/e2"/>
     </target>
     
     <target name="test.init">

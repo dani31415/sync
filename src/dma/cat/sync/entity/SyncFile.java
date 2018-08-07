@@ -202,7 +202,7 @@ public class SyncFile implements Comparable {
         while (parent0!=null) {
             parentPath = parent0.fullName;
             if (parent0.parent!=null)
-                path += "/"+parent0.meta.name;
+                path = parent0.meta.name+"/"+path;
             parent0 = parent0.parent;
         }
         return new String[]{parentPath,path};

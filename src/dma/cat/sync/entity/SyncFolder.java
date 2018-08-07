@@ -48,6 +48,7 @@ public class SyncFolder {
     }
     
     private SyncFile findFromSha1Iter(SyncFile sf, String sha1) {
+        if (sf.meta.sha1==null) return null; // folder
         if (sf.meta.sha1.equals(sha1)) return sf;
         for (SyncFile s : sf.children) {
             SyncFile r = findFromSha1Iter(s,sha1);  
