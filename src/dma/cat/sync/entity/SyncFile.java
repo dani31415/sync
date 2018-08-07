@@ -1,11 +1,6 @@
 package dma.cat.sync.entity;
 
-import dma.cat.sync.tools.FileTools;
-
-import java.io.File;
-
 import java.util.Collections;
-import java.util.Date;
 import java.util.Vector;
 
 public class SyncFile implements Comparable {
@@ -33,7 +28,7 @@ public class SyncFile implements Comparable {
     public void fillFrom(SyncFile sf) {    
         fullName = sf.fullName;
         fillFrom(sf.meta);
-        children = new Vector<SyncFile>();
+        //children = new Vector<SyncFile>();
         listId = sf.listId;
     }
     

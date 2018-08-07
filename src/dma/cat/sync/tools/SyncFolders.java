@@ -168,7 +168,7 @@ public class SyncFolders {
                         // Same origin to grant that move is possible
                         boolean delete = t0.fileSha1.equals(t1.fileSha1) && sameOrigin(f1,f2,t1.getRemoveFile(),t0.getCopyDestFile());
                         if (delete) {
-                            // Copy "a" to "b" and remove "c" <=> move "c" to "b"
+                            // "a "= "c", copy "a" to "b" and remove "c" <=> move "c" to "b"
                             tasks.remove(t0); // remove the copy
                             tasks.remove(t1); // remove the delete
                             // Add the rename
@@ -199,14 +199,16 @@ public class SyncFolders {
     private String descendant(SyncFolder f1, SyncFolder f2,String deleteFolder, String file, String sha1) { 
         // Find "file" as descendant of "deleteFolder" only if they are from the same origin
         if (f1.fromFullName(deleteFolder)!=null && f1.fromFullName(file)!=null) {
-            SyncFile sf = f1.findFromSha1(sha1);
+            SyncFile df = f1.fromFullName(deleteFolder);
+            SyncFile sf = f1.findFromSha1Iter(df,sha1);
             if (sf!=null && !sf.markToMove) {
                 sf.markToMove = true; // do not pick again
                 return sf.fullName;
             }
         }
         if (f2.fromFullName(deleteFolder)!=null && f2.fromFullName(file)!=null) {
-            SyncFile sf = f2.findFromSha1(sha1);
+            SyncFile df = f2.fromFullName(deleteFolder);
+            SyncFile sf = f2.findFromSha1Iter(df,sha1);
             if (sf!=null && !sf.markToMove) {
                 sf.markToMove = true; // do not pick again
                 return sf.fullName;

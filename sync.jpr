@@ -73,6 +73,17 @@
    </hash>
    <hash n="oracle.jdeveloper.runner.RunConfigurations">
       <hash n="runConfigurationDefinitions">
+         <hash n="Copy of Default">
+            <value n="custom" v="false"/>
+            <value n="javaOptions" v="-Xmx500M"/>
+            <value n="name" v="Copy of Default"/>
+            <hash n="oracle.jdevimpl.runner.debug.DebugConfiguration">
+               <value n="remoteParameter:jpdaListen:localAddress" v=""/>
+            </hash>
+            <value n="programArguments" v="e:\personal\sync \\WDMYCLOUD\Dani\sync"/>
+            <url n="targetURL" path="src/dma/cat/sync/MainSync.java"/>
+            <value n="VMName" v="client"/>
+         </hash>
          <hash n="Default">
             <value n="custom" v="false"/>
             <value n="javaOptions" v="-Xmx500M"/>
@@ -86,6 +97,7 @@
          </hash>
       </hash>
       <list n="runConfigurationList">
+         <string v="Copy of Default"/>
          <string v="Default"/>
       </list>
    </hash>
