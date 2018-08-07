@@ -1,6 +1,6 @@
 language: java
 script: ant all test
-jdk: oraclejdk9
+# jdk: oraclejdk9
 sudo: required
 dist: precise
 
