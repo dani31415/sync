@@ -24,5 +24,6 @@ public class MetaFileList {
     }
     
     public int descendants;
+    public long modificationDate;
     public List<MetaFile> children;
 }

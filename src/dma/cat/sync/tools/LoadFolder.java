@@ -8,6 +8,8 @@ import dma.cat.sync.entity.SyncFolder;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 
 import java.util.Date;
@@ -40,6 +42,7 @@ public class LoadFolder {
 
     public SyncFolder load(File file) {
         System.out.println("Loading "+file);
+        testWrite(file);
         SyncFile sf = loadSyncFolder(file,new CurrentLoad());
         SyncFolder sff = new SyncFolder();
         sff.root = sf;
@@ -61,14 +64,16 @@ public class LoadFolder {
             // If not able to load metafile, create it
             sf.updateInvalid=true;
         } else {
+            // Estimate modification date of the folder (we do not trust lastModified for folders)
             sf.descendants = mf.descendants;
+            sf.meta.modificationDate = mf.modificationDate;
         }
         
         if (currentLoad.previousFound==0) {
             currentLoad.previousFound=sf.descendants;
         }
         
-        // Recursively load files
+        // Recursively load files and create list of children in sf
         File [] fs = file.listFiles();
         if (fs!=null) {
             for (File c : fs) {
@@ -84,7 +89,7 @@ public class LoadFolder {
             }
         }
         
-        // Update metadata information
+        // Update metadata information of the children from the .backup file
         int n = 0;
         for (SyncFile c : sf.children) {
             n += c.descendants;
@@ -93,19 +98,19 @@ public class LoadFolder {
         }
 
         if (mf!=null) {
-            // Add files from metadata that where removed 
+            // Now mf contains the removed files (existing files were removed from mf in the previous step)
             for (MetaFile c : mf.children) {
                 SyncFile sf0 = new SyncFile();
                 sf0.fillFrom(c);
                 if (c.exists) {
                     // Removed since last datetime, so use now as changed datetime (otherwise the change datetime is the creation datetime)
                     sf0.meta.modificationDate = new Date().getTime();
+                    sf.updateInvalid = true;
                 }
                 sf0.meta.exists = false;
                 sf0.parent = sf;
                 sf0.fullName = sf.fullName + File.separator + c.name;
                 sf.children.add(sf0);
-                sf.updateInvalid = true;
             }
         }
         n += sf.children.size(); // Including removed files
@@ -116,6 +121,41 @@ public class LoadFolder {
             sf.updateInvalid = true;
         }
         
+        // Compute the sha1 and save the metadata if necessary
+        boolean changed;
+        do {
+            changed = false;
+            for (SyncFile c : sf.children) {
+                if (computeSha1(c)) {
+                    sf.updateInvalid = true;
+                    changed = true;
+                    saveBackupMeta(sf); // save for each sha1 computation
+                    break; // sf was modified, so break the for
+                }
+            }
+        } while (changed);
+        
+        /*if (!sf.meta.isFolder) {
+            FileTools ft = new FileTools();
+            sf.meta.sha1 = null;// ft.sha1(new File(sf.fullName));
+        }*/
+        if (mf!=null) {
+            long mod = 0;
+            for (MetaFile child : mf.children) {
+                if (child.modificationDate>0) {
+                    mod = Math.max(mod,child.modificationDate);
+                }
+            }
+            if (mod>0 && sf.meta.modificationDate!=mod) {
+                //System.out.println(file);
+                //System.out.println("old:"+new Date(sf.meta.modificationDate));
+                //System.out.println("new:"+new Date(mod));
+                sf.meta.modificationDate=mod;
+                sf.updateInvalid=true;
+                //System.exit(1);
+            }
+        }
+
         // Save metadata file only if changed
         saveBackupMeta(sf);
         return sf;
@@ -184,6 +224,10 @@ public class LoadFolder {
             } else {
                 mf.descendants = Integer.parseInt(r0);
             }
+            String smod0 = current.getAttribute("modified");
+            if (smod0!=null & smod0.length()>0) {
+                mf.modificationDate = Long.parseLong(smod0);    
+            }
             for (int i=1;i<nl.getLength();i++) { // ignore first because it is the top one!
                 Element elem = (Element)nl.item(i);
                 MetaFile c = new MetaFile();
@@ -210,13 +254,22 @@ public class LoadFolder {
         return null;
     }
 
+    public boolean computeSha1(SyncFile sf) {
+        if (!sf.meta.isFolder && sf.meta.sha1.length()<=10) {
+            FileTools ft = new FileTools();
+            sf.meta.sha1 = ft.sha1(new File(sf.fullName));
+            return true; // a sha1 was computed
+        }
+        return false;
+    }
+    
     public void computeBackupMeta(MetaFileList mf, SyncFile sf) {
         MetaFile c = mf!=null ? mf.find(sf.meta.name):null;
         if (sf.needsMetaUpdate(c)) {
             // Compute metadata
             if (!sf.meta.isFolder) {
-                FileTools ft = new FileTools();
-                sf.meta.sha1 = ft.sha1(new File(sf.fullName));
+                //FileTools ft = new FileTools();
+                sf.meta.sha1 = "";// ft.sha1(new File(sf.fullName));
             }
             sf.meta.trackDate = new Date().getTime();
             sf.updateInvalidate();
@@ -256,11 +309,30 @@ public class LoadFolder {
                 osw.write("</backup-meta>\r\n");
                 osw.flush();
                 osw.close();
+                output.setLastModified(sf.meta.modificationDate);
             } catch (Exception ex) {
                 throw new Error(ex);
             }
             sf.updateInvalid = false;
         }
     }
-
+    
+    private void testWrite(File file) {
+        try {
+            File outFile = new File(file,"file.tmp");
+            OutputStream out = new FileOutputStream(outFile);
+            out.close();
+            Date date = new Date(new Date().getTime()-1000*60*60*24);
+            outFile.setLastModified(date.getTime());
+            long outDate = outFile.lastModified();
+            long diff = outDate-date.getTime();
+            System.out.println(diff);
+            if (Math.abs(diff)>1000) {
+                throw new IOException("Impossible to set modified date to file.");
+            }
+            outFile.delete();
+        } catch (IOException ex) {
+            throw new Error(ex);
+        }
+    }
 }

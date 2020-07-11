@@ -145,6 +145,8 @@ public class SyncFile implements Comparable {
         sb.append(descendants);
         sb.append("\" modified=\"");
         sb.append(meta.modificationDate);
+        sb.append("\" strModified=\"");
+        sb.append(dateToIso(meta.modificationDate));
         sb.append("\"");
         if (!meta.isFolder) {
             //sb.append(" modified=\"");
@@ -161,6 +163,14 @@ public class SyncFile implements Comparable {
         }
         sb.append(" />");
         return sb.toString();
+    }
+    
+    private String dateToIso(long time) {
+        TimeZone tz = TimeZone.getTimeZone("UTC");
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        df.setTimeZone(tz);
+        String asISO = df.format(new Date(time));
+        return asISO;
     }
     
     public int compareTo(SyncFile sf1, SyncFile sf2) {
