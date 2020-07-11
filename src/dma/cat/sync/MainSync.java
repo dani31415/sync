@@ -1,5 +1,6 @@
 package dma.cat.sync;
 
+import dma.cat.sync.entity.FileTask;
 import dma.cat.sync.entity.SyncFile;
 import dma.cat.sync.entity.SyncFolder;
 import dma.cat.sync.tools.LoadFolder;
@@ -27,10 +28,20 @@ public class MainSync {
         LoadFolder lf = new LoadFolder();
         File f1, f2;
         
-        if (args.length==2) {
+        if (args.length>=2) {
             f1 = new File(args[0]);
             //File f2 = new File("h:\\personal\\fotos");
             f2 = new File(args[1]);
+            if (args.length>=3) {
+                FileTask.DEBUG = args[2].equals("--debug");
+            }
+        } else if (args.length==1) {
+            f1 = new File(args[0]);
+            System.out.println("Loading folder:");
+            System.out.println(f1.getAbsolutePath());
+            SyncFolder sf1 = lf.load(f1);
+            System.out.println(f1.getAbsoluteFile()+ " loaded.");
+            return;
         } else {
             f1 = new File("Z:");
             //File f2 = new File("h:\\personal\\fotos");
