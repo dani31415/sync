@@ -1,6 +1,12 @@
 package dma.cat.sync.entity;
 
+import java.text.DateFormat;
+
+import java.text.SimpleDateFormat;
+
 import java.util.Collections;
+import java.util.Date;
+import java.util.TimeZone;
 import java.util.Vector;
 
 public class SyncFile implements Comparable {
@@ -98,7 +104,8 @@ public class SyncFile implements Comparable {
     }
     
     static public boolean ignoreName(String name) {
-        return name.equals(".backup") || name.equals(".deleted") || name.endsWith(".lrdata") || name.equals(".DS_Store") || name.equals(".git") || name.equals(".gitignore");
+        return name.equals(".backup") || name.equals(".deleted") || name.endsWith(".lrdata") || name.endsWith("~") || name.equals(".DS_Store") || name.equals(".git") 
+        || name.equals(".gitignore") || name.equals(".wdmc") || name.equals(".wdphotos");
     }
     
     /**
@@ -112,8 +119,14 @@ public class SyncFile implements Comparable {
         }
         if (meta.exists!=c.exists) return true; // file removed
         if (meta.exists && meta.isFolder!=c.isFolder) return true; // changed folder status
-        if (meta.exists && meta.size!=c.size) return true; // file changed
-        if (meta.exists && meta.modificationDate!=c.modificationDate) return true; // file changed
+        if (meta.exists && !meta.isFolder && meta.size!=c.size) {
+            System.out.println("Size changed: "+meta.size+" vs "+c.size);
+            return true; // file changed
+        }
+        if (meta.exists && !meta.isFolder && (meta.modificationDate/1000)!=(c.modificationDate/1000)) { // up to 1sec.
+            System.out.println("Date changed: "+(meta.modificationDate/1000)+" vs "+(c.modificationDate/1000));
+            return true; // file changed
+        }
         return false;
     }
     
