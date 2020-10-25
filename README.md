@@ -6,9 +6,9 @@
 
 Command line tool for two-way synchronization of the files of two folders. Optimized for raw images and large video files.
 
-The motivation of this project was to make room in a laptop for more images and videos where are synchronized in a backup device. 
+The motivation of this project was to make room in a laptop to have more space to store images and videos. After synchronized to the backup device, it is safe to remove the unused files (since are *archived* in the backcup).
 
-The syncrhonization works fine for external USB devices and shared network folders.
+The syncrhonization works fine with external USB devices and shared network folders.
 
 ## Dependencies
 
